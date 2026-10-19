@@ -3,13 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NFeReader — NF-e Automático</title>
+<title>NFeReader — NF-e e CT-e Automático</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0c0a14; --surface: #13101e; --border: #201c30;
     --accent: #a78bfa; --accent2: #f472b6; --ok: #34d399; --danger: #f87171; --warn: #fbbf24;
     --text: #ede9fe; --muted: #6b6585; --row-even: #100d1c; --row-hover: #1a1630;
+  }
+  /* tema da aba CT-e */
+  body.tab-cte {
+    --bg: #0b0e14; --surface: #12161f; --border: #1e2535;
+    --accent: #00e5a0; --accent2: #0077ff; --ok: #00e5a0; --danger: #ff4060; --warn: #ffd060;
+    --text: #e8edf5; --muted: #5a6480; --row-even: #0f1320; --row-hover: #161c2e;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
@@ -20,20 +26,32 @@
       radial-gradient(ellipse 60% 40% at 80% 90%, rgba(244,114,182,.05) 0%, transparent 60%);
     pointer-events: none; z-index: 0;
   }
+  body.tab-cte::before {
+    background-image:
+      linear-gradient(rgba(0,229,160,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
   header { position: relative; z-index: 1; padding: 26px 40px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
   .logo-mark { width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 12px; display: grid; place-items: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: #fff; flex-shrink: 0; box-shadow: 0 0 20px rgba(167,139,250,.3); }
+  body.tab-cte .logo-mark { background: var(--accent); color: #000; box-shadow: none; border-radius: 10px; }
   h1 { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
   h1 span { color: var(--accent); }
-  .pill { margin-left: auto; background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.25); color: var(--accent); font-size: 11px; font-family: 'DM Mono', monospace; padding: 4px 12px; border-radius: 999px; }
+  .pill { margin-left: auto; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--accent); font-size: 11px; font-family: 'DM Mono', monospace; padding: 4px 12px; border-radius: 999px; }
   .pill.ok { color: var(--ok); border-color: rgba(52,211,153,.3); background: rgba(52,211,153,.08); }
   .pill.err { color: var(--danger); border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.08); }
   .btn-link { background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; }
   .btn-link:hover { color: var(--accent); }
 
-  main { position: relative; z-index: 1; padding: 36px 40px; max-width: 1600px; margin: 0 auto; }
+  main { position: relative; z-index: 1; padding: 30px 40px 36px; max-width: 1600px; margin: 0 auto; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 22px; }
+  .tab { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 9px 20px; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; transition: color .15s, border-color .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-color: var(--accent); }
 
   .drop-area { border: 2px dashed var(--border); border-radius: 14px; padding: 18px 24px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; position: relative; background: var(--surface); margin-bottom: 24px; }
-  .drop-area.drag-over { border-color: var(--accent); background: rgba(167,139,250,.05); }
+  .drop-area.drag-over { border-color: var(--accent); background: rgba(255,255,255,.04); }
   .drop-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
   .drop-area p { color: var(--muted); font-size: 13px; font-family: 'DM Mono', monospace; }
   .drop-area p strong { color: var(--accent); }
@@ -45,14 +63,15 @@
   .stat-card.pink::after { background: var(--accent2); }
   .stat-card.green::after { background: var(--ok); }
   .stat-card.red::after { background: var(--danger); }
-  .stat-card.warn::after { background: var(--warn); }
+  .stat-card.warn::after, .stat-card.yellow::after { background: var(--warn); }
+  .stat-card.blue::after { background: var(--accent2); }
   .stat-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
   .stat-value { font-size: 20px; font-weight: 800; letter-spacing: -1px; }
   .stat-card.purple .stat-value { color: var(--accent); }
-  .stat-card.pink .stat-value { color: var(--accent2); }
+  .stat-card.pink .stat-value, .stat-card.blue .stat-value { color: var(--accent2); }
   .stat-card.green .stat-value { color: var(--ok); }
   .stat-card.red .stat-value { color: var(--danger); }
-  .stat-card.warn .stat-value { color: var(--warn); }
+  .stat-card.warn .stat-value, .stat-card.yellow .stat-value { color: var(--warn); }
 
   .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
   .toolbar-title { font-size: 15px; font-weight: 700; flex: 1; }
@@ -65,20 +84,24 @@
   .btn:active { transform: scale(.97); }
   .btn:disabled { opacity: .5; cursor: wait; }
   .btn-primary { background: var(--accent); color: #fff; }
+  body.tab-cte .btn-primary { color: #000; }
   .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
   .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   thead { background: var(--bg); position: sticky; top: 0; z-index: 2; }
   th { padding: 13px 14px; text-align: left; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
-  th:hover, th.sorted { color: var(--accent); }
+  th.nosort { cursor: default; }
+  th:not(.nosort):hover, th.sorted { color: var(--accent); }
   th .sort-icon { margin-left: 3px; opacity: .4; }
   th.sorted .sort-icon { opacity: 1; }
-  td { padding: 11px 14px; border-bottom: 1px solid rgba(32,28,48,.7); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  td { padding: 11px 14px; border-bottom: 1px solid rgba(128,128,160,.12); font-family: 'DM Mono', monospace; white-space: nowrap; }
   tr:nth-child(even) td { background: var(--row-even); }
   tr:hover td { background: var(--row-hover); }
   tr:last-child td { border-bottom: none; }
-  tr.nf-first td { border-top: 1px solid rgba(167,139,250,.15); }
+  tr.grp-first td { border-top: 1px solid rgba(167,139,250,.15); }
+  .more-note { text-align: center; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; padding: 12px; }
+
   .nf-num { color: var(--accent); font-weight: 600; }
   .item-seq { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.2); color: var(--accent); font-size: 11px; font-weight: 600; }
   .val-merc { color: var(--ok); font-weight: 500; }
@@ -87,10 +110,21 @@
   .doc-txt { color: var(--muted); font-size: 11px; }
   .date-txt { color: var(--warn); }
   .badge-transp { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; background: rgba(244,114,182,.1); color: var(--accent2); border: 1px solid rgba(244,114,182,.2); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-  .obs-cell { max-width: 240px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 11px; cursor: default; white-space: nowrap; }
+  .obs-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 11px; cursor: default; white-space: nowrap; }
   .obs-cell:hover { color: var(--text); }
   .val-tax { color: #fb923c; font-weight: 500; }
   .ncm-txt { color: var(--muted); font-size: 11px; letter-spacing: .5px; }
+
+  /* CT-e */
+  .cte-num { color: var(--text); font-weight: 500; }
+  .val-frete { color: var(--accent); font-weight: 500; }
+  .cte-merc { color: #60a5fa; }
+  .toma-name { color: var(--text); font-size: 12px; }
+  .toma-doc { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: .3px; }
+  .badge-cif { background: rgba(0,119,255,.15); color: #60a5fa; border: 1px solid rgba(0,119,255,.25); }
+  .badge-fob { background: rgba(0,229,160,.12); color: #00e5a0; border: 1px solid rgba(0,229,160,.25); }
+  .badge-other { background: rgba(255,208,96,.12); color: #ffd060; border: 1px solid rgba(255,208,96,.25); }
 
   .empty-state { text-align: center; padding: 56px 20px; color: var(--muted); }
   .empty-state .big-icon { font-size: 44px; margin-bottom: 14px; }
@@ -132,72 +166,44 @@
 </div>
 
 <header>
-  <div class="logo-mark">NF-e</div>
-  <h1>NFe<span>Reader</span></h1>
+  <div class="logo-mark" id="logoMark">NF-e</div>
+  <h1 id="brand">NFe<span>Reader</span></h1>
   <div class="pill" id="syncPill">carregando…</div>
   <button class="btn-link" onclick="logout()">sair</button>
 </header>
 
 <main>
 
+  <div class="tabs" id="tabs"></div>
+
   <div class="drop-area" id="dropArea">
     <input type="file" id="fileInput" accept=".xml" multiple>
-    <p>As NF-e chegam automaticamente pela pasta monitorada no computador. Precisa enviar uma avulsa? Arraste XMLs aqui ou <strong>clique para selecionar</strong></p>
+    <p>As NF-e e os CT-e chegam automaticamente pela pasta monitorada no computador. Precisa enviar uma avulsa? Arraste XMLs aqui ou <strong>clique para selecionar</strong></p>
   </div>
 
-  <div class="stats-bar" id="statsBar" style="display:none">
-    <div class="stat-card purple"><div class="stat-label">NFs</div><div class="stat-value" id="statNFs">0</div></div>
-    <div class="stat-card pink"><div class="stat-label">Total de Itens</div><div class="stat-value" id="statItens">0</div></div>
-    <div class="stat-card green"><div class="stat-label">Total Mercadoria</div><div class="stat-value" id="statMerc">R$ 0</div></div>
-    <div class="stat-card warn"><div class="stat-label">Total ICMS</div><div class="stat-value" id="statICMS">R$ 0</div></div>
-    <div class="stat-card pink"><div class="stat-label">Total IPI</div><div class="stat-value" id="statIPI">R$ 0</div></div>
-    <div class="stat-card red"><div class="stat-label">Erros</div><div class="stat-value" id="statErrors">0</div></div>
-  </div>
+  <div class="stats-bar" id="statsBar"></div>
 
-  <div class="toolbar" id="toolbar" style="display:none">
-    <span class="toolbar-title">📦 Itens Extraídos</span>
+  <div class="toolbar" id="toolbar">
+    <span class="toolbar-title" id="viewTitle"></span>
     <input class="date-input" type="date" id="dateFrom" title="Emissão a partir de">
     <input class="date-input" type="date" id="dateTo" title="Emissão até">
-    <input class="search-box" type="text" id="searchBox" placeholder="buscar NF, produto, remetente...">
+    <input class="search-box" type="text" id="searchBox">
     <button class="btn btn-secondary" id="syncBtn" onclick="refreshNow()">🔄 Atualizar</button>
     <button class="btn btn-secondary" onclick="copyCSV()">📋 Copiar CSV</button>
     <button class="btn btn-primary" onclick="downloadCSV()">⬇ Exportar CSV</button>
   </div>
 
-  <div class="table-wrap" id="tableWrap" style="display:none">
+  <div class="table-wrap" id="tableWrap">
     <table id="dataTable">
-      <thead>
-        <tr>
-          <th onclick="sortBy('nNF')" id="th-nNF">N° NF <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('dhEmi')" id="th-dhEmi">Emissão <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('remNome')" id="th-remNome">Remetente <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('destNome')" id="th-destNome">Destinatário <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('transp')" id="th-transp">Transportadora <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('itemSeq')" id="th-itemSeq">Item <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('xProd')" id="th-xProd">Descrição do Produto <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('cProd')" id="th-cProd">Cód. Produto <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('ncm')" id="th-ncm">NCM <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('cest')" id="th-cest">CEST <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('cfop')" id="th-cfop">CFOP <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('uCom')" id="th-uCom">Unid. <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('qCom')" id="th-qCom">Qtde <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('vUnCom')" id="th-vUnCom">Vl. Unit. <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('vProd')" id="th-vProd">Vl. Total Item <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('vICMS')" id="th-vICMS">ICMS <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('pICMS')" id="th-pICMS">% ICMS <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('vIPI')" id="th-vIPI">IPI <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('pIPI')" id="th-pIPI">% IPI <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('vNF')" id="th-vNF">Vl. Total NF <span class="sort-icon">↕</span></th>
-          <th onclick="sortBy('obs')" id="th-obs">Dados Adicionais <span class="sort-icon">↕</span></th>
-        </tr>
-      </thead>
+      <thead><tr id="theadRow"></tr></thead>
       <tbody id="tableBody"></tbody>
     </table>
     <div class="empty-state" id="emptyState" style="display:none">
-      <div class="big-icon">🔍</div>
-      <p>Nenhum resultado.</p>
+      <div class="big-icon" id="emptyIcon">🔍</div>
+      <p id="emptyMsg"></p>
     </div>
   </div>
+  <div class="more-note" id="moreNote"></div>
 
   <div class="error-log" id="errorLog" style="display:none">
     <h3>⚠ Arquivos com problema</h3>
@@ -212,16 +218,163 @@
 // ───────── CONFIG ─────────
 const API_URL = 'https://script.google.com/macros/s/AKfycbwwZttaioK2E7qvJ9MJn1t3VB5AG-Pp4TABpoIUUDbMorw3flDyEVhWdAucsTml2NrEEA/exec';   // termina em /exec
 const AUTO_REFRESH_MS = 60000;
+const MAX_LINHAS = 1000;   // linhas desenhadas na tela por vez (o CSV sempre leva tudo)
 
-let allRows = [];
+// ───────── HELPERS ─────────
+const fmt = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmtQtd = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 4 });
+const fmtPct = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+const c2 = n => Number(n).toFixed(2).replace('.', ',');
+function fmtDate(s) { const d = String(s).substring(0, 10).split('-'); return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : s; }
+function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+const joinQ = (...v) => v.map(x => String(x ?? '')).join('\u0001').toLowerCase();
+const tipoBadge = t => { const u = String(t).toUpperCase(); return u.includes('CIF') ? 'badge-cif' : u.includes('FOB') ? 'badge-fob' : 'badge-other'; };
+const num = v => Number(v) || 0;
+
+// ───────── DEFINIÇÃO DAS ABAS ─────────
+// columns: k = chave, h = título, td(r) = célula, sort = campo usado para ordenar (opcional), nosort = sem ordenação
+// csv: lista [título, função]
+const VIEWS = {
+  nfe: {
+    tab: 'NF-e', logo: 'NF-e', brand: 'NFe', action: 'list',
+    title: '📦 Itens Extraídos', placeholder: 'buscar NF, produto, remetente...',
+    vazio: 'Nenhuma NF-e importada ainda. Os XMLs aparecem aqui assim que o robô enviar.',
+    csvName: 'nfe_itens',
+    sort: { col: 'dhEmi', dir: -1 },
+    group: r => r.chave,
+    normalize(r) {
+      const o = {
+        ...r,
+        nNF: String(r.nNF),
+        dhEmiSort: String(r.dhEmi || ''),
+        dhEmi: r.dhEmi ? fmtDate(String(r.dhEmi)) : 'N/D',
+        itemSeq: num(r.itemSeq),
+        qCom: num(r.qCom), vUnCom: num(r.vUnCom), vProd: num(r.vProd),
+        vICMS: num(r.vICMS), pICMS: num(r.pICMS), vIPI: num(r.vIPI), pIPI: num(r.pIPI), vNF: num(r.vNF)
+      };
+      o._q = joinQ(o.nNF, o.remNome, o.destNome, o.transp, o.xProd, o.cProd, o.ncm, o.cest, o.cfop, o.obs, o.chave);
+      return o;
+    },
+    columns: [
+      { k: 'nNF', h: 'N° NF', td: r => `<td class="nf-num">${escHtml(r.nNF)}</td>` },
+      { k: 'dhEmi', h: 'Emissão', sort: 'dhEmiSort', td: r => `<td class="date-txt">${escHtml(r.dhEmi)}</td>` },
+      { k: 'remNome', h: 'Remetente', td: r => `<td><div class="person-name">${escHtml(r.remNome)}</div><div class="doc-txt">${escHtml(r.remDoc)}</div></td>` },
+      { k: 'destNome', h: 'Destinatário', td: r => `<td><div class="person-name">${escHtml(r.destNome)}</div><div class="doc-txt">${escHtml(r.destDoc)}</div></td>` },
+      { k: 'transp', h: 'Transportadora', td: r => `<td><span class="badge-transp">${escHtml(r.transp)}</span></td>` },
+      { k: 'itemSeq', h: 'Item', td: r => `<td style="text-align:center"><span class="item-seq">${r.itemSeq}</span></td>` },
+      { k: 'xProd', h: 'Descrição do Produto', td: r => `<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${escHtml(r.xProd)}</td>` },
+      { k: 'cProd', h: 'Cód. Produto', td: r => `<td class="doc-txt">${escHtml(r.cProd)}</td>` },
+      { k: 'ncm', h: 'NCM', td: r => `<td class="ncm-txt">${escHtml(r.ncm) || '—'}</td>` },
+      { k: 'cest', h: 'CEST', td: r => `<td class="ncm-txt">${escHtml(r.cest) || '—'}</td>` },
+      { k: 'cfop', h: 'CFOP', td: r => `<td class="doc-txt">${escHtml(r.cfop)}</td>` },
+      { k: 'uCom', h: 'Unid.', td: r => `<td class="doc-txt">${escHtml(r.uCom)}</td>` },
+      { k: 'qCom', h: 'Qtde', td: r => `<td style="text-align:right">${fmtQtd(r.qCom)}</td>` },
+      { k: 'vUnCom', h: 'Vl. Unit.', td: r => `<td class="val-merc" style="text-align:right">${fmt(r.vUnCom)}</td>` },
+      { k: 'vProd', h: 'Vl. Total Item', td: r => `<td class="val-total" style="text-align:right">${fmt(r.vProd)}</td>` },
+      { k: 'vICMS', h: 'ICMS', td: r => `<td class="val-tax" style="text-align:right">${r.vICMS > 0 ? fmt(r.vICMS) : '—'}</td>` },
+      { k: 'pICMS', h: '% ICMS', td: r => `<td style="text-align:right;color:var(--muted)">${r.pICMS > 0 ? fmtPct(r.pICMS) : '—'}</td>` },
+      { k: 'vIPI', h: 'IPI', td: r => `<td class="val-tax" style="text-align:right">${r.vIPI > 0 ? fmt(r.vIPI) : '—'}</td>` },
+      { k: 'pIPI', h: '% IPI', td: r => `<td style="text-align:right;color:var(--muted)">${r.pIPI > 0 ? fmtPct(r.pIPI) : '—'}</td>` },
+      { k: 'vNF', h: 'Vl. Total NF', td: r => `<td style="text-align:right;color:var(--accent);font-weight:600">${fmt(r.vNF)}</td>` },
+      { k: 'obs', h: 'Dados Adicionais', td: r => `<td class="obs-cell" title="${escHtml(r.obs)}">${escHtml(r.obs) || '—'}</td>` }
+    ],
+    csv: [
+      ['N° NF', r => r.nNF], ['Data Emissão', r => r.dhEmi], ['Remetente', r => r.remNome], ['CNPJ/CPF Remetente', r => r.remDoc],
+      ['Destinatário', r => r.destNome], ['CNPJ/CPF Destinatário', r => r.destDoc], ['Transportadora', r => r.transp],
+      ['Item', r => r.itemSeq], ['Descrição Produto', r => r.xProd], ['Cód. Produto', r => r.cProd], ['NCM', r => r.ncm],
+      ['CEST', r => r.cest], ['CFOP', r => r.cfop], ['Unidade', r => r.uCom], ['Quantidade', r => fmtQtd(r.qCom)],
+      ['Vl. Unitário', r => c2(r.vUnCom)], ['Vl. Total Item', r => c2(r.vProd)], ['Vl. ICMS', r => c2(r.vICMS)],
+      ['% ICMS', r => c2(r.pICMS)], ['Vl. IPI', r => c2(r.vIPI)], ['% IPI', r => c2(r.pIPI)], ['Vl. Total NF', r => c2(r.vNF)],
+      ['Dados Adicionais', r => r.obs], ['Chave de Acesso', r => r.chave]
+    ],
+    stats(rows, nErros) {
+      const nfs = new Map();
+      rows.forEach(r => { if (!nfs.has(r.chave)) nfs.set(r.chave, r.vNF); });
+      const totalMerc = [...nfs.values()].reduce((s, v) => s + v, 0);
+      return [
+        { label: 'NFs', cls: 'purple', value: nfs.size },
+        { label: 'Total de Itens', cls: 'pink', value: rows.length },
+        { label: 'Total Mercadoria', cls: 'green', value: fmt(totalMerc) },
+        { label: 'Total ICMS', cls: 'warn', value: fmt(rows.reduce((s, r) => s + r.vICMS, 0)) },
+        { label: 'Total IPI', cls: 'pink', value: fmt(rows.reduce((s, r) => s + r.vIPI, 0)) },
+        { label: 'Erros', cls: 'red', value: nErros }
+      ];
+    }
+  },
+
+  cte: {
+    tab: 'CT-e', logo: 'CT-e', brand: 'CTe', action: 'listCte',
+    title: '📋 Dados Extraídos', placeholder: 'buscar CT-e, NF, transportadora...',
+    vazio: 'Nenhum CT-e importado ainda. Os XMLs aparecem aqui assim que o robô enviar.',
+    csvName: 'cte_lote',
+    sort: { col: 'dhEmi', dir: -1 },
+    group: null,
+    normalize(r) {
+      const frete = num(r.frete), merc = num(r.merc);
+      const o = {
+        ...r,
+        cte: String(r.cte),
+        nf: String(r.nf || 'N/D'),
+        dhEmiSort: r.dhEmi && r.dhEmi !== 'N/D' ? String(r.dhEmi) : '',
+        dhEmi: r.dhEmi && r.dhEmi !== 'N/D' ? fmtDate(String(r.dhEmi)) : 'N/D',
+        frete, merc,
+        pctFrete: merc > 0 ? (frete / merc) * 100 : 0
+      };
+      o._q = joinQ(o.cte, o.nf, o.transp, o.cnpjRem, o.docDest, o.tomaNome, o.tomaCNPJ, o.ufEntrega, o.tipo, o.obs, o.arquivo, o.chave);
+      return o;
+    },
+    columns: [
+      { k: 'cte', h: 'N° CT-e', td: r => `<td class="cte-num">${escHtml(r.cte)}</td>` },
+      { k: 'dhEmi', h: 'Emissão', sort: 'dhEmiSort', td: r => `<td class="date-txt">${escHtml(r.dhEmi)}</td>` },
+      { k: 'nf', h: 'N° NF', td: r => `<td>${escHtml(r.nf)}</td>` },
+      { k: 'transp', h: 'Transportadora', td: r => `<td>${escHtml(r.transp)}</td>` },
+      { k: 'cnpjRem', h: 'CNPJ Remetente', td: r => `<td style="color:var(--muted)">${escHtml(r.cnpjRem)}</td>` },
+      { k: 'docDest', h: 'CPF/CNPJ Dest.', td: r => `<td style="color:var(--muted)">${escHtml(r.docDest)}</td>` },
+      { k: 'tomaNome', h: 'Tomador', td: r => `<td><div class="toma-name">${escHtml(r.tomaNome)}</div><div class="toma-doc">${escHtml(r.tomaCNPJ)}</div></td>` },
+      { k: 'tomaCNPJ', h: 'CNPJ Tomador', td: r => `<td style="color:var(--muted)">${escHtml(r.tomaCNPJ)}</td>` },
+      { k: 'ufEntrega', h: 'UF Entrega', td: r => `<td style="font-weight:600;text-align:center">${escHtml(r.ufEntrega)}</td>` },
+      { k: 'frete', h: 'Valor Frete', td: r => `<td class="val-frete">${fmt(r.frete)}</td>` },
+      { k: 'merc', h: 'Valor Mercadoria', td: r => `<td class="cte-merc">${fmt(r.merc)}</td>` },
+      { k: 'pctFrete', h: '% Frete/NF', td: r => {
+          const p = r.pctFrete;
+          const cor = p === 0 ? 'var(--muted)' : p < 5 ? 'var(--accent)' : p < 10 ? '#ffd060' : 'var(--danger)';
+          return `<td style="color:${cor};font-weight:600">${p > 0 ? fmtPct(p) : '—'}</td>`;
+        } },
+      { k: 'tipo', h: 'Tipo Frete', td: r => `<td><span class="badge ${tipoBadge(r.tipo)}">${escHtml(r.tipo)}</span></td>` },
+      { k: 'obs', h: 'Obs / Inf. Adicionais', td: r => `<td class="obs-cell" title="${escHtml(r.obs)}">${escHtml(r.obs) || '—'}</td>` },
+      { k: 'arquivo', h: 'Arquivo', nosort: true, td: r => `<td style="color:var(--muted);font-size:11px">${escHtml(r.arquivo)}</td>` }
+    ],
+    csv: [
+      ['N° CT-e', r => r.cte], ['Data Emissão', r => r.dhEmi], ['N° NF', r => r.nf], ['Transportadora', r => r.transp],
+      ['CNPJ Remetente', r => r.cnpjRem], ['CPF/CNPJ Destinatário', r => r.docDest],
+      ['Nome Tomador', r => r.tomaNome], ['CNPJ Tomador', r => r.tomaCNPJ],
+      ['UF Entrega', r => r.ufEntrega], ['Valor Frete', r => c2(r.frete)], ['Valor Mercadoria', r => c2(r.merc)],
+      ['% Frete/NF', r => c2(r.pctFrete) + '%'], ['Tipo Frete', r => r.tipo],
+      ['Obs / Inf. Adicionais', r => r.obs], ['Arquivo', r => r.arquivo], ['Chave de Acesso', r => r.chave]
+    ],
+    stats(rows, nErros) {
+      return [
+        { label: 'Importados', cls: 'green', value: rows.length },
+        { label: 'Erros', cls: 'red', value: nErros },
+        { label: 'Total Frete', cls: 'blue', value: fmt(rows.reduce((s, r) => s + r.frete, 0)) },
+        { label: 'Total Mercadoria', cls: 'yellow', value: fmt(rows.reduce((s, r) => s + r.merc, 0)) }
+      ];
+    }
+  }
+};
+
+// ───────── ESTADO ─────────
+let cur = 'nfe';
 let errors = [];
-let sortCol = 'dhEmi';
-let sortDir = -1;
 let ultimaImportacao = null;
 let timer = null;
+const st = {};
+Object.keys(VIEWS).forEach(k => {
+  st[k] = { rows: [], sig: null, loaded: false, sortCol: VIEWS[k].sort.col, sortDir: VIEWS[k].sort.dir, q: '', from: '', to: '' };
+});
 
 // ───────── API ─────────
-const getPin = () => localStorage.getItem('nfe_pin') || '';
+const getPin = () => { try { return localStorage.getItem('nfe_pin') || ''; } catch (_) { return ''; } };
 
 async function apiGet(action) {
   const url = `${API_URL}?action=${action}&pin=${encodeURIComponent(getPin())}&_=${Date.now()}`;
@@ -233,10 +386,7 @@ async function apiGet(action) {
 
 async function apiPost(payload) {
   // sem Content-Type customizado => text/plain, evita preflight CORS no Apps Script
-  const r = await fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify({ ...payload, pin: getPin() })
-  });
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ ...payload, pin: getPin() }) });
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || 'Erro na API');
   return j;
@@ -252,40 +402,82 @@ function showLogin(msg) {
 async function doLogin() {
   const pin = document.getElementById('pinInput').value.trim();
   if (!pin) return;
-  localStorage.setItem('nfe_pin', pin);
-  const ok = await loadData(true);
+  try { localStorage.setItem('nfe_pin', pin); } catch (_) {}
+  const ok = await loadData({ fromLogin: true, force: true });
   if (ok) loginEl.classList.remove('show');
 }
 document.getElementById('pinBtn').addEventListener('click', doLogin);
 document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-function logout() { localStorage.removeItem('nfe_pin'); clearInterval(timer); allRows = []; render(); showLogin(); }
+function logout() {
+  try { localStorage.removeItem('nfe_pin'); } catch (_) {}
+  clearInterval(timer); timer = null;
+  Object.keys(st).forEach(k => { st[k].rows = []; st[k].sig = null; st[k].loaded = false; });
+  render();
+  showLogin();
+}
+
+// ───────── ABAS ─────────
+function buildTabs() {
+  document.getElementById('tabs').innerHTML = Object.keys(VIEWS)
+    .map(k => `<button class="tab" data-k="${k}" onclick="setView('${k}')">${VIEWS[k].tab}</button>`).join('');
+}
+
+function setView(k) {
+  cur = k;
+  const V = VIEWS[k], S = st[k];
+  document.body.classList.toggle('tab-cte', k === 'cte');
+  document.getElementById('logoMark').textContent = V.logo;
+  document.getElementById('brand').innerHTML = `${V.brand}<span>Reader</span>`;
+  document.title = `${V.brand}Reader — ${V.tab} Automático`;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.k === k));
+  document.getElementById('viewTitle').textContent = V.title;
+  const sb = document.getElementById('searchBox');
+  sb.placeholder = V.placeholder; sb.value = S.q;
+  document.getElementById('dateFrom').value = S.from;
+  document.getElementById('dateTo').value = S.to;
+  try { localStorage.setItem('nfe_view', k); } catch (_) {}
+  renderHead();
+  render();
+  if (!S.loaded && getPin()) loadData({ force: true });
+}
+
+function renderHead() {
+  const V = VIEWS[cur], S = st[cur];
+  document.getElementById('theadRow').innerHTML = V.columns.map(c => c.nosort
+    ? `<th class="nosort">${c.h}</th>`
+    : `<th onclick="sortBy('${c.k}')" id="th-${c.k}" class="${S.sortCol === c.k ? 'sorted' : ''}">${c.h} <span class="sort-icon">↕</span></th>`
+  ).join('');
+}
 
 // ───────── CARREGAR DADOS ─────────
-async function loadData(fromLogin) {
+function setPill(ok) {
   const pill = document.getElementById('syncPill');
+  if (!ok) { pill.className = 'pill err'; pill.textContent = 'offline'; return; }
+  pill.className = 'pill ok';
+  pill.textContent = ultimaImportacao
+    ? 'Robô · última importação ' + new Date(ultimaImportacao).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    : 'Robô · aguardando importações';
+}
+
+async function loadData(opts = {}) {
+  const k = cur, V = VIEWS[k], S = st[k];
   try {
-    const j = await apiGet('list');
-    allRows = j.rows.map(r => ({
-      ...r,
-      nNF: String(r.nNF),
-      dhEmiSort: String(r.dhEmi || ''),
-      dhEmi: fmtDate(String(r.dhEmi || '')),
-      qCom: Number(r.qCom) || 0, vUnCom: Number(r.vUnCom) || 0, vProd: Number(r.vProd) || 0,
-      vICMS: Number(r.vICMS) || 0, pICMS: Number(r.pICMS) || 0,
-      vIPI: Number(r.vIPI) || 0, pIPI: Number(r.pIPI) || 0, vNF: Number(r.vNF) || 0,
-      itemSeq: Number(r.itemSeq) || 0
-    }));
+    const j = await apiGet(V.action);
+    const ultima = j.rows.length ? j.rows[j.rows.length - 1].importadoEm : '';
+    const sig = j.rows.length + '|' + ultima;
     ultimaImportacao = j.ultimaImportacao;
-    pill.className = 'pill ok';
-    pill.textContent = ultimaImportacao ? 'Robô · última importação ' + new Date(ultimaImportacao).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Robô · aguardando importações';
-    render();
-    clearInterval(timer);
-    timer = setInterval(() => loadData(false), AUTO_REFRESH_MS);
+    setPill(true);
+    if (opts.force || !S.loaded || sig !== S.sig) {
+      S.rows = j.rows.map(V.normalize);
+      S.sig = sig;
+      S.loaded = true;
+      if (cur === k) render();
+    }
+    if (!timer) timer = setInterval(() => loadData(), AUTO_REFRESH_MS);
     return true;
   } catch (e) {
-    pill.className = 'pill err';
-    pill.textContent = 'offline';
-    if (/PIN/.test(e.message)) { clearInterval(timer); showLogin(fromLogin ? 'PIN inválido' : ''); }
+    setPill(false);
+    if (/PIN/.test(e.message)) { clearInterval(timer); timer = null; showLogin(opts.fromLogin ? 'PIN inválido' : ''); }
     else showToast('⚠ ' + e.message);
     return false;
   }
@@ -294,7 +486,7 @@ async function loadData(fromLogin) {
 async function refreshNow() {
   const btn = document.getElementById('syncBtn');
   btn.disabled = true;
-  const ok = await loadData(false);
+  const ok = await loadData({ force: true });
   if (ok) showToast('✅ Dados atualizados');
   btn.disabled = false;
 }
@@ -311,103 +503,89 @@ async function uploadFiles(files) {
   const xmls = files.filter(f => f.name.toLowerCase().endsWith('.xml'));
   if (!xmls.length) { showToast('⚠ Nenhum arquivo .xml encontrado'); return; }
   errors = [];
-  let added = 0, dup = 0;
+  let nfe = 0, cte = 0, dup = 0, ign = 0;
   showToast('⏳ Enviando ' + xmls.length + ' arquivo(s)…');
   try {
     for (let i = 0; i < xmls.length; i += 20) {
-      const lote = xmls.slice(i, i + 20);
       const payload = [];
-      for (const f of lote) payload.push({ name: f.name, xml: await f.text() });
+      for (const f of xmls.slice(i, i + 20)) payload.push({ name: f.name, xml: await f.text() });
       const j = await apiPost({ action: 'importXml', files: payload });
-      added += j.result.added; dup += j.result.duplicates;
-      errors.push(...j.result.errors);
+      const r = j.result;
+      nfe += r.nfeNovas || 0; cte += r.cteNovos || 0; dup += r.duplicates || 0; ign += r.ignored || 0;
+      errors.push(...(r.errors || []));
     }
-    await loadData(false);
-    showToast(`✅ ${added} item(ns) novos · ${dup} NF(s) duplicada(s)`);
+    Object.values(st).forEach(S => { S.sig = null; });
+    await loadData({ force: true });
+    showToast(`✅ ${nfe} NF-e · ${cte} CT-e novos · ${dup} já existiam` + (ign ? ` · ${ign} ignorados` : ''));
   } catch (e) { showToast('⚠ ' + e.message); }
   fileInput.value = '';
   render();
 }
 
-// ───────── RENDER ─────────
-function render() {
-  const q = document.getElementById('searchBox').value.toLowerCase();
-  const from = document.getElementById('dateFrom').value;
-  const to = document.getElementById('dateTo').value;
-
-  const filtered = allRows.filter(r => {
-    if (from && r.dhEmiSort < from) return false;
-    if (to && r.dhEmiSort > to) return false;
-    if (!q) return true;
-    return [r.nNF, r.remNome, r.destNome, r.transp, r.xProd, r.cProd, r.ncm, r.cest, r.cfop, r.obs, r.chave]
-      .some(v => String(v || '').toLowerCase().includes(q));
-  });
-
-  if (sortCol) {
-    filtered.sort((a, b) => {
-      let av = a[sortCol], bv = b[sortCol];
-      if (sortCol === 'dhEmi') { av = a.dhEmiSort; bv = b.dhEmiSort; }
-      if (typeof av === 'number') return (av - bv) * sortDir;
-      return String(av).localeCompare(String(bv), 'pt-BR', { numeric: true }) * sortDir;
+// ───────── FILTRO / ORDEM ─────────
+function filtrar(k) {
+  const V = VIEWS[k], S = st[k];
+  const q = S.q.trim().toLowerCase();
+  const rows = S.rows.filter(r =>
+    (!S.from || r.dhEmiSort >= S.from) &&
+    (!S.to || r.dhEmiSort <= S.to) &&
+    (!q || r._q.includes(q)));
+  const col = V.columns.find(c => c.k === S.sortCol);
+  const key = col ? (col.sort || col.k) : S.sortCol;
+  if (key) {
+    rows.sort((a, b) => {
+      const av = a[key], bv = b[key];
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * S.sortDir;
+      return String(av).localeCompare(String(bv), 'pt-BR', { numeric: true }) * S.sortDir;
     });
   }
+  return rows;
+}
 
-  // stats sobre o que está filtrado
-  const nfs = new Map();
-  filtered.forEach(r => { if (!nfs.has(r.chave)) nfs.set(r.chave, r.vNF); });
-  const totalMerc = [...nfs.values()].reduce((s, v) => s + v, 0);
-  document.getElementById('statNFs').textContent = nfs.size;
-  document.getElementById('statItens').textContent = filtered.length;
-  document.getElementById('statMerc').textContent = fmt(totalMerc);
-  document.getElementById('statICMS').textContent = fmt(filtered.reduce((s, r) => s + r.vICMS, 0));
-  document.getElementById('statIPI').textContent = fmt(filtered.reduce((s, r) => s + r.vIPI, 0));
-  document.getElementById('statErrors').textContent = errors.length;
+function sortBy(col) {
+  const S = st[cur];
+  if (S.sortCol === col) S.sortDir *= -1; else { S.sortCol = col; S.sortDir = 1; }
+  renderHead();
+  render();
+}
 
-  const hasData = allRows.length > 0;
-  document.getElementById('statsBar').style.display = hasData || errors.length ? 'flex' : 'none';
-  document.getElementById('toolbar').style.display = 'flex';
-  document.getElementById('tableWrap').style.display = hasData ? 'block' : 'none';
+// ───────── RENDER ─────────
+function render() {
+  const V = VIEWS[cur], S = st[cur];
+  const rows = filtrar(cur);
+
+  document.getElementById('statsBar').innerHTML = V.stats(rows, errors.length)
+    .map(s => `<div class="stat-card ${s.cls}"><div class="stat-label">${s.label}</div><div class="stat-value">${s.value}</div></div>`).join('');
 
   const tbody = document.getElementById('tableBody');
   const empty = document.getElementById('emptyState');
+  const note = document.getElementById('moreNote');
   tbody.innerHTML = '';
 
-  if (!filtered.length) {
+  if (!rows.length) {
     empty.style.display = 'block';
+    document.getElementById('emptyIcon').textContent = S.rows.length ? '🔍' : '📭';
+    document.getElementById('emptyMsg').textContent = S.rows.length ? 'Nenhum resultado para a busca ou os filtros.' : V.vazio;
+    note.textContent = '';
   } else {
     empty.style.display = 'none';
-    let lastNF = null;
+    const mostra = rows.slice(0, MAX_LINHAS);
+    let lastGrp = null;
     const frag = document.createDocumentFragment();
-    filtered.forEach(r => {
-      const isFirst = r.chave !== lastNF;
-      lastNF = r.chave;
+    mostra.forEach(r => {
       const tr = document.createElement('tr');
-      if (isFirst) tr.classList.add('nf-first');
-      tr.innerHTML = `
-        <td class="nf-num">${escHtml(r.nNF)}</td>
-        <td class="date-txt">${escHtml(r.dhEmi)}</td>
-        <td><div class="person-name">${escHtml(r.remNome)}</div><div class="doc-txt">${escHtml(r.remDoc)}</div></td>
-        <td><div class="person-name">${escHtml(r.destNome)}</div><div class="doc-txt">${escHtml(r.destDoc)}</div></td>
-        <td><span class="badge-transp">${escHtml(r.transp)}</span></td>
-        <td style="text-align:center"><span class="item-seq">${r.itemSeq}</span></td>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${escHtml(r.xProd)}</td>
-        <td class="doc-txt">${escHtml(r.cProd)}</td>
-        <td class="ncm-txt">${escHtml(r.ncm) || '—'}</td>
-        <td class="ncm-txt">${escHtml(r.cest) || '—'}</td>
-        <td class="doc-txt">${escHtml(r.cfop)}</td>
-        <td class="doc-txt">${escHtml(r.uCom)}</td>
-        <td style="text-align:right">${fmtQtd(r.qCom)}</td>
-        <td class="val-merc" style="text-align:right">${fmt(r.vUnCom)}</td>
-        <td class="val-total" style="text-align:right">${fmt(r.vProd)}</td>
-        <td class="val-tax" style="text-align:right">${r.vICMS > 0 ? fmt(r.vICMS) : '—'}</td>
-        <td style="text-align:right;color:var(--muted)">${r.pICMS > 0 ? fmtPct(r.pICMS) : '—'}</td>
-        <td class="val-tax" style="text-align:right">${r.vIPI > 0 ? fmt(r.vIPI) : '—'}</td>
-        <td style="text-align:right;color:var(--muted)">${r.pIPI > 0 ? fmtPct(r.pIPI) : '—'}</td>
-        <td style="text-align:right;color:var(--accent);font-weight:600">${fmt(r.vNF)}</td>
-        <td class="obs-cell" title="${escHtml(r.obs)}">${escHtml(r.obs) || '—'}</td>`;
+      if (V.group) {
+        const g = V.group(r);
+        if (g !== lastGrp) tr.classList.add('grp-first');
+        lastGrp = g;
+      }
+      tr.innerHTML = V.columns.map(c => c.td(r)).join('');
       frag.appendChild(tr);
     });
     tbody.appendChild(frag);
+    note.textContent = rows.length > MAX_LINHAS
+      ? `Mostrando ${MAX_LINHAS} de ${rows.length} linhas — use a busca ou o filtro de datas para ver o restante (o CSV leva todas).`
+      : '';
   }
 
   const errLog = document.getElementById('errorLog');
@@ -417,58 +595,29 @@ function render() {
   } else errLog.style.display = 'none';
 }
 
-function sortBy(col) {
-  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
-  document.querySelectorAll('th').forEach(t => t.classList.remove('sorted'));
-  document.getElementById(`th-${col}`)?.classList.add('sorted');
-  render();
-}
-['searchBox', 'dateFrom', 'dateTo'].forEach(id => document.getElementById(id).addEventListener('input', render));
+document.getElementById('searchBox').addEventListener('input', e => { st[cur].q = e.target.value; render(); });
+document.getElementById('dateFrom').addEventListener('input', e => { st[cur].from = e.target.value; render(); });
+document.getElementById('dateTo').addEventListener('input', e => { st[cur].to = e.target.value; render(); });
 
-// ───────── HELPERS ─────────
-const fmt = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const fmtQtd = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 4 });
-const fmtPct = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
-function fmtDate(s) { const d = s.substring(0, 10).split('-'); return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : s; }
-function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
-// ───────── CSV (respeita filtros atuais) ─────────
-function currentRows() {
-  const q = document.getElementById('searchBox').value.toLowerCase();
-  const from = document.getElementById('dateFrom').value;
-  const to = document.getElementById('dateTo').value;
-  return allRows.filter(r => {
-    if (from && r.dhEmiSort < from) return false;
-    if (to && r.dhEmiSort > to) return false;
-    if (!q) return true;
-    return [r.nNF, r.remNome, r.destNome, r.transp, r.xProd, r.cProd, r.ncm, r.cest, r.cfop, r.obs, r.chave]
-      .some(v => String(v || '').toLowerCase().includes(q));
-  });
-}
+// ───────── CSV (respeita busca e filtros da aba atual) ─────────
 function toCSV() {
-  const h = ['N° NF', 'Data Emissão', 'Remetente', 'CNPJ/CPF Remetente', 'Destinatário', 'CNPJ/CPF Destinatário', 'Transportadora',
-    'Item', 'Descrição Produto', 'Cód. Produto', 'NCM', 'CEST', 'CFOP', 'Unidade', 'Quantidade', 'Vl. Unitário', 'Vl. Total Item',
-    'Vl. ICMS', '% ICMS', 'Vl. IPI', '% IPI', 'Vl. Total NF', 'Dados Adicionais', 'Chave de Acesso'];
-  const c2 = n => Number(n).toFixed(2).replace('.', ',');
-  const lines = [h.join(';')];
-  currentRows().forEach(r => {
-    lines.push([r.nNF, r.dhEmi, r.remNome, r.remDoc, r.destNome, r.destDoc, r.transp,
-      r.itemSeq, r.xProd, r.cProd, r.ncm, r.cest, r.cfop, r.uCom, fmtQtd(r.qCom),
-      c2(r.vUnCom), c2(r.vProd), c2(r.vICMS), c2(r.pICMS), c2(r.vIPI), c2(r.pIPI), c2(r.vNF), r.obs, r.chave]
-      .map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';'));
+  const V = VIEWS[cur];
+  const lines = [V.csv.map(c => c[0]).join(';')];
+  filtrar(cur).forEach(r => {
+    lines.push(V.csv.map(c => `"${String(c[1](r) ?? '').replace(/"/g, '""')}"`).join(';'));
   });
   return lines.join('\n');
 }
 function downloadCSV() {
-  if (!allRows.length) return;
-  const blob = new Blob(['\ufeff' + toCSV()], { type: 'text/csv;charset=utf-8;' });
+  if (!st[cur].rows.length) return;
+  const blob = new Blob(['﻿' + toCSV()], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `nfe_itens_${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+  a.href = url; a.download = `${VIEWS[cur].csvName}_${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
   showToast('⬇ CSV exportado!');
 }
 function copyCSV() {
-  if (!allRows.length) return;
+  if (!st[cur].rows.length) return;
   navigator.clipboard.writeText(toCSV()).then(() => showToast('📋 Copiado!'));
 }
 
@@ -480,8 +629,12 @@ function showToast(msg) {
 
 // ───────── START ─────────
 (function init() {
-  if (!getPin()) { showLogin(); return; }
-  loadData(false);
+  buildTabs();
+  let ultima = 'nfe';
+  try { ultima = localStorage.getItem('nfe_view') || 'nfe'; } catch (_) {}
+  if (!VIEWS[ultima]) ultima = 'nfe';
+  if (!getPin()) { setView(ultima); showLogin(); return; }
+  setView(ultima);
 })();
 </script>
 </body>
