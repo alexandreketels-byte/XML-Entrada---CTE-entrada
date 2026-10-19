@@ -142,7 +142,7 @@
 
   <div class="drop-area" id="dropArea">
     <input type="file" id="fileInput" accept=".xml" multiple>
-    <p>As NF-e chegam automaticamente do sistema IO. Precisa de uma avulsa? Arraste XMLs aqui ou <strong>clique para selecionar</strong></p>
+    <p>As NF-e chegam automaticamente pela pasta monitorada no computador. Precisa enviar uma avulsa? Arraste XMLs aqui ou <strong>clique para selecionar</strong></p>
   </div>
 
   <div class="stats-bar" id="statsBar" style="display:none">
@@ -159,7 +159,7 @@
     <input class="date-input" type="date" id="dateFrom" title="Emissão a partir de">
     <input class="date-input" type="date" id="dateTo" title="Emissão até">
     <input class="search-box" type="text" id="searchBox" placeholder="buscar NF, produto, remetente...">
-    <button class="btn btn-secondary" id="syncBtn" onclick="syncNow()">🔄 Sincronizar</button>
+    <button class="btn btn-secondary" id="syncBtn" onclick="refreshNow()">🔄 Atualizar</button>
     <button class="btn btn-secondary" onclick="copyCSV()">📋 Copiar CSV</button>
     <button class="btn btn-primary" onclick="downloadCSV()">⬇ Exportar CSV</button>
   </div>
@@ -206,18 +206,18 @@
 
 </main>
 
-<footer>NFe<strong>Reader</strong> · integração automática com o sistema IO</footer>
+<footer>NFe<strong>Reader</strong> · importação automática a partir da pasta de XMLs</footer>
 
 <script>
 // ───────── CONFIG ─────────
-const API_URL = 'https://script.google.com/macros/s/AKfycbwwZttaioK2E7qvJ9MJn1t3VB5AG-Pp4TABpoIUUDbMorw3flDyEVhWdAucsTml2NrEEA/exec';   // termina em /exec
+const API_URL = 'COLE_AQUI_A_URL_DO_WEB_APP';   // termina em /exec
 const AUTO_REFRESH_MS = 60000;
 
 let allRows = [];
 let errors = [];
 let sortCol = 'dhEmi';
 let sortDir = -1;
-let ultimaSync = null;
+let ultimaImportacao = null;
 let timer = null;
 
 // ───────── API ─────────
@@ -275,9 +275,9 @@ async function loadData(fromLogin) {
       vIPI: Number(r.vIPI) || 0, pIPI: Number(r.pIPI) || 0, vNF: Number(r.vNF) || 0,
       itemSeq: Number(r.itemSeq) || 0
     }));
-    ultimaSync = j.ultimaSync;
+    ultimaImportacao = j.ultimaImportacao;
     pill.className = 'pill ok';
-    pill.textContent = ultimaSync ? 'IO · sync ' + new Date(ultimaSync).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'IO · aguardando sync';
+    pill.textContent = ultimaImportacao ? 'Robô · última importação ' + new Date(ultimaImportacao).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Robô · aguardando importações';
     render();
     clearInterval(timer);
     timer = setInterval(() => loadData(false), AUTO_REFRESH_MS);
@@ -291,16 +291,11 @@ async function loadData(fromLogin) {
   }
 }
 
-async function syncNow() {
+async function refreshNow() {
   const btn = document.getElementById('syncBtn');
   btn.disabled = true;
-  try {
-    const j = await apiGet('sync');
-    const r = j.result || {};
-    if (r.error) showToast('⚠ ' + r.error);
-    else showToast(`✅ ${r.added || 0} novo(s) item(ns) · ${r.duplicates || 0} NF(s) já existentes`);
-    await loadData(false);
-  } catch (e) { showToast('⚠ ' + e.message); }
+  const ok = await loadData(false);
+  if (ok) showToast('✅ Dados atualizados');
   btn.disabled = false;
 }
 
