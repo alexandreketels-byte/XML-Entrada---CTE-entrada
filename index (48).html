@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFeReader — NF-e Automático</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0a14; --surface: #13101e; --border: #201c30;
+    --accent: #a78bfa; --accent2: #f472b6; --ok: #34d399; --danger: #f87171; --warn: #fbbf24;
+    --text: #ede9fe; --muted: #6b6585; --row-even: #100d1c; --row-hover: #1a1630;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(167,139,250,.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(244,114,182,.05) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+  header { position: relative; z-index: 1; padding: 26px 40px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); }
+  .logo-mark { width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 12px; display: grid; place-items: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: #fff; flex-shrink: 0; box-shadow: 0 0 20px rgba(167,139,250,.3); }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
+  h1 span { color: var(--accent); }
+  .pill { margin-left: auto; background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.25); color: var(--accent); font-size: 11px; font-family: 'DM Mono', monospace; padding: 4px 12px; border-radius: 999px; }
+  .pill.ok { color: var(--ok); border-color: rgba(52,211,153,.3); background: rgba(52,211,153,.08); }
+  .pill.err { color: var(--danger); border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.08); }
+  .btn-link { background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; }
+  .btn-link:hover { color: var(--accent); }
+
+  main { position: relative; z-index: 1; padding: 36px 40px; max-width: 1600px; margin: 0 auto; }
+
+  .drop-area { border: 2px dashed var(--border); border-radius: 14px; padding: 18px 24px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; position: relative; background: var(--surface); margin-bottom: 24px; }
+  .drop-area.drag-over { border-color: var(--accent); background: rgba(167,139,250,.05); }
+  .drop-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-area p { color: var(--muted); font-size: 13px; font-family: 'DM Mono', monospace; }
+  .drop-area p strong { color: var(--accent); }
+
+  .stats-bar { display: flex; gap: 14px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; flex: 1; min-width: 130px; position: relative; overflow: hidden; }
+  .stat-card::after { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 3px 0 0 3px; }
+  .stat-card.purple::after { background: var(--accent); }
+  .stat-card.pink::after { background: var(--accent2); }
+  .stat-card.green::after { background: var(--ok); }
+  .stat-card.red::after { background: var(--danger); }
+  .stat-card.warn::after { background: var(--warn); }
+  .stat-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+  .stat-value { font-size: 20px; font-weight: 800; letter-spacing: -1px; }
+  .stat-card.purple .stat-value { color: var(--accent); }
+  .stat-card.pink .stat-value { color: var(--accent2); }
+  .stat-card.green .stat-value { color: var(--ok); }
+  .stat-card.red .stat-value { color: var(--danger); }
+  .stat-card.warn .stat-value { color: var(--warn); }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .toolbar-title { font-size: 15px; font-weight: 700; flex: 1; }
+  .search-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; width: 240px; transition: border-color .2s; }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--muted); }
+  .date-input { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; outline: none; color-scheme: dark; }
+  .btn { padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; transition: opacity .15s, transform .1s; white-space: nowrap; }
+  .btn:hover { opacity: .85; }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+  .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  thead { background: var(--bg); position: sticky; top: 0; z-index: 2; }
+  th { padding: 13px 14px; text-align: left; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+  th:hover, th.sorted { color: var(--accent); }
+  th .sort-icon { margin-left: 3px; opacity: .4; }
+  th.sorted .sort-icon { opacity: 1; }
+  td { padding: 11px 14px; border-bottom: 1px solid rgba(32,28,48,.7); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  tr:nth-child(even) td { background: var(--row-even); }
+  tr:hover td { background: var(--row-hover); }
+  tr:last-child td { border-bottom: none; }
+  tr.nf-first td { border-top: 1px solid rgba(167,139,250,.15); }
+  .nf-num { color: var(--accent); font-weight: 600; }
+  .item-seq { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.2); color: var(--accent); font-size: 11px; font-weight: 600; }
+  .val-merc { color: var(--ok); font-weight: 500; }
+  .val-total { color: var(--accent2); font-weight: 600; }
+  .person-name { color: var(--text); max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+  .doc-txt { color: var(--muted); font-size: 11px; }
+  .date-txt { color: var(--warn); }
+  .badge-transp { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; background: rgba(244,114,182,.1); color: var(--accent2); border: 1px solid rgba(244,114,182,.2); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+  .obs-cell { max-width: 240px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 11px; cursor: default; white-space: nowrap; }
+  .obs-cell:hover { color: var(--text); }
+  .val-tax { color: #fb923c; font-weight: 500; }
+  .ncm-txt { color: var(--muted); font-size: 11px; letter-spacing: .5px; }
+
+  .empty-state { text-align: center; padding: 56px 20px; color: var(--muted); }
+  .empty-state .big-icon { font-size: 44px; margin-bottom: 14px; }
+  .empty-state p { font-family: 'DM Mono', monospace; font-size: 13px; }
+
+  .error-log { margin-top: 18px; background: rgba(248,113,113,.05); border: 1px solid rgba(248,113,113,.2); border-radius: 12px; padding: 14px 18px; }
+  .error-log h3 { color: var(--danger); font-size: 12px; font-family: 'DM Mono', monospace; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+  .error-log ul { list-style: none; }
+  .error-log li { font-family: 'DM Mono', monospace; font-size: 12px; color: #fca5a5; padding: 2px 0; }
+
+  .toast { position: fixed; bottom: 28px; right: 28px; background: var(--surface); border: 1px solid var(--accent); color: var(--accent); padding: 13px 18px; border-radius: 10px; font-family: 'DM Mono', monospace; font-size: 13px; z-index: 999; animation: slideUp .3s ease; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+  @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* LOGIN */
+  #login { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: none; align-items: center; justify-content: center; }
+  #login.show { display: flex; }
+  .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 34px; width: 320px; text-align: center; }
+  .login-box h2 { margin-bottom: 6px; font-size: 18px; }
+  .login-box p { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; margin-bottom: 18px; }
+  .login-box input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 11px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 18px; text-align: center; letter-spacing: 6px; outline: none; margin-bottom: 14px; }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-box .btn { width: 100%; justify-content: center; }
+  #loginErr { color: var(--danger); font-family: 'DM Mono', monospace; font-size: 12px; margin-top: 10px; min-height: 16px; }
+
+  footer { position: relative; z-index: 1; text-align: center; padding: 22px; color: var(--muted); font-size: 12px; font-family: 'DM Mono', monospace; border-top: 1px solid var(--border); margin-top: 36px; }
+  @media (max-width: 640px) { main { padding: 18px; } header { padding: 16px 18px; flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-box">
+    <h2>NFeReader</h2>
+    <p>Digite o PIN de acesso</p>
+    <input type="password" id="pinInput" inputmode="numeric" autocomplete="off" maxlength="12">
+    <button class="btn btn-primary" id="pinBtn">Entrar</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<header>
+  <div class="logo-mark">NF-e</div>
+  <h1>NFe<span>Reader</span></h1>
+  <div class="pill" id="syncPill">carregando…</div>
+  <button class="btn-link" onclick="logout()">sair</button>
+</header>
+
+<main>
+
+  <div class="drop-area" id="dropArea">
+    <input type="file" id="fileInput" accept=".xml" multiple>
+    <p>As NF-e chegam automaticamente do sistema IO. Precisa de uma avulsa? Arraste XMLs aqui ou <strong>clique para selecionar</strong></p>
+  </div>
+
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-card purple"><div class="stat-label">NFs</div><div class="stat-value" id="statNFs">0</div></div>
+    <div class="stat-card pink"><div class="stat-label">Total de Itens</div><div class="stat-value" id="statItens">0</div></div>
+    <div class="stat-card green"><div class="stat-label">Total Mercadoria</div><div class="stat-value" id="statMerc">R$ 0</div></div>
+    <div class="stat-card warn"><div class="stat-label">Total ICMS</div><div class="stat-value" id="statICMS">R$ 0</div></div>
+    <div class="stat-card pink"><div class="stat-label">Total IPI</div><div class="stat-value" id="statIPI">R$ 0</div></div>
+    <div class="stat-card red"><div class="stat-label">Erros</div><div class="stat-value" id="statErrors">0</div></div>
+  </div>
+
+  <div class="toolbar" id="toolbar" style="display:none">
+    <span class="toolbar-title">📦 Itens Extraídos</span>
+    <input class="date-input" type="date" id="dateFrom" title="Emissão a partir de">
+    <input class="date-input" type="date" id="dateTo" title="Emissão até">
+    <input class="search-box" type="text" id="searchBox" placeholder="buscar NF, produto, remetente...">
+    <button class="btn btn-secondary" id="syncBtn" onclick="syncNow()">🔄 Sincronizar</button>
+    <button class="btn btn-secondary" onclick="copyCSV()">📋 Copiar CSV</button>
+    <button class="btn btn-primary" onclick="downloadCSV()">⬇ Exportar CSV</button>
+  </div>
+
+  <div class="table-wrap" id="tableWrap" style="display:none">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th onclick="sortBy('nNF')" id="th-nNF">N° NF <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('dhEmi')" id="th-dhEmi">Emissão <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('remNome')" id="th-remNome">Remetente <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('destNome')" id="th-destNome">Destinatário <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('transp')" id="th-transp">Transportadora <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('itemSeq')" id="th-itemSeq">Item <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('xProd')" id="th-xProd">Descrição do Produto <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('cProd')" id="th-cProd">Cód. Produto <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('ncm')" id="th-ncm">NCM <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('cest')" id="th-cest">CEST <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('cfop')" id="th-cfop">CFOP <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('uCom')" id="th-uCom">Unid. <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('qCom')" id="th-qCom">Qtde <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('vUnCom')" id="th-vUnCom">Vl. Unit. <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('vProd')" id="th-vProd">Vl. Total Item <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('vICMS')" id="th-vICMS">ICMS <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('pICMS')" id="th-pICMS">% ICMS <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('vIPI')" id="th-vIPI">IPI <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('pIPI')" id="th-pIPI">% IPI <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('vNF')" id="th-vNF">Vl. Total NF <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('obs')" id="th-obs">Dados Adicionais <span class="sort-icon">↕</span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="big-icon">🔍</div>
+      <p>Nenhum resultado.</p>
+    </div>
+  </div>
+
+  <div class="error-log" id="errorLog" style="display:none">
+    <h3>⚠ Arquivos com problema</h3>
+    <ul id="errorList"></ul>
+  </div>
+
+</main>
+
+<footer>NFe<strong>Reader</strong> · integração automática com o sistema IO</footer>
+
+<script>
+// ───────── CONFIG ─────────
+const API_URL = 'COLE_AQUI_A_URL_DO_WEB_APP';   // termina em /exec
+const AUTO_REFRESH_MS = 60000;
+
+let allRows = [];
+let errors = [];
+let sortCol = 'dhEmi';
+let sortDir = -1;
+let ultimaSync = null;
+let timer = null;
+
+// ───────── API ─────────
+const getPin = () => localStorage.getItem('nfe_pin') || '';
+
+async function apiGet(action) {
+  const url = `${API_URL}?action=${action}&pin=${encodeURIComponent(getPin())}&_=${Date.now()}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'Erro na API');
+  return j;
+}
+
+async function apiPost(payload) {
+  // sem Content-Type customizado => text/plain, evita preflight CORS no Apps Script
+  const r = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, pin: getPin() })
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'Erro na API');
+  return j;
+}
+
+// ───────── LOGIN ─────────
+const loginEl = document.getElementById('login');
+function showLogin(msg) {
+  loginEl.classList.add('show');
+  document.getElementById('loginErr').textContent = msg || '';
+  document.getElementById('pinInput').focus();
+}
+async function doLogin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  if (!pin) return;
+  localStorage.setItem('nfe_pin', pin);
+  const ok = await loadData(true);
+  if (ok) loginEl.classList.remove('show');
+}
+document.getElementById('pinBtn').addEventListener('click', doLogin);
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+function logout() { localStorage.removeItem('nfe_pin'); clearInterval(timer); allRows = []; render(); showLogin(); }
+
+// ───────── CARREGAR DADOS ─────────
+async function loadData(fromLogin) {
+  const pill = document.getElementById('syncPill');
+  try {
+    const j = await apiGet('list');
+    allRows = j.rows.map(r => ({
+      ...r,
+      nNF: String(r.nNF),
+      dhEmiSort: String(r.dhEmi || ''),
+      dhEmi: fmtDate(String(r.dhEmi || '')),
+      qCom: Number(r.qCom) || 0, vUnCom: Number(r.vUnCom) || 0, vProd: Number(r.vProd) || 0,
+      vICMS: Number(r.vICMS) || 0, pICMS: Number(r.pICMS) || 0,
+      vIPI: Number(r.vIPI) || 0, pIPI: Number(r.pIPI) || 0, vNF: Number(r.vNF) || 0,
+      itemSeq: Number(r.itemSeq) || 0
+    }));
+    ultimaSync = j.ultimaSync;
+    pill.className = 'pill ok';
+    pill.textContent = ultimaSync ? 'IO · sync ' + new Date(ultimaSync).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'IO · aguardando sync';
+    render();
+    clearInterval(timer);
+    timer = setInterval(() => loadData(false), AUTO_REFRESH_MS);
+    return true;
+  } catch (e) {
+    pill.className = 'pill err';
+    pill.textContent = 'offline';
+    if (/PIN/.test(e.message)) { clearInterval(timer); showLogin(fromLogin ? 'PIN inválido' : ''); }
+    else showToast('⚠ ' + e.message);
+    return false;
+  }
+}
+
+async function syncNow() {
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  try {
+    const j = await apiGet('sync');
+    const r = j.result || {};
+    if (r.error) showToast('⚠ ' + r.error);
+    else showToast(`✅ ${r.added || 0} novo(s) item(ns) · ${r.duplicates || 0} NF(s) já existentes`);
+    await loadData(false);
+  } catch (e) { showToast('⚠ ' + e.message); }
+  btn.disabled = false;
+}
+
+// ───────── UPLOAD MANUAL ─────────
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('drag-over'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+dropArea.addEventListener('drop', e => { e.preventDefault(); dropArea.classList.remove('drag-over'); uploadFiles([...e.dataTransfer.files]); });
+fileInput.addEventListener('change', () => uploadFiles([...fileInput.files]));
+
+async function uploadFiles(files) {
+  const xmls = files.filter(f => f.name.toLowerCase().endsWith('.xml'));
+  if (!xmls.length) { showToast('⚠ Nenhum arquivo .xml encontrado'); return; }
+  errors = [];
+  let added = 0, dup = 0;
+  showToast('⏳ Enviando ' + xmls.length + ' arquivo(s)…');
+  try {
+    for (let i = 0; i < xmls.length; i += 20) {
+      const lote = xmls.slice(i, i + 20);
+      const payload = [];
+      for (const f of lote) payload.push({ name: f.name, xml: await f.text() });
+      const j = await apiPost({ action: 'importXml', files: payload });
+      added += j.result.added; dup += j.result.duplicates;
+      errors.push(...j.result.errors);
+    }
+    await loadData(false);
+    showToast(`✅ ${added} item(ns) novos · ${dup} NF(s) duplicada(s)`);
+  } catch (e) { showToast('⚠ ' + e.message); }
+  fileInput.value = '';
+  render();
+}
+
+// ───────── RENDER ─────────
+function render() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+
+  const filtered = allRows.filter(r => {
+    if (from && r.dhEmiSort < from) return false;
+    if (to && r.dhEmiSort > to) return false;
+    if (!q) return true;
+    return [r.nNF, r.remNome, r.destNome, r.transp, r.xProd, r.cProd, r.ncm, r.cest, r.cfop, r.obs, r.chave]
+      .some(v => String(v || '').toLowerCase().includes(q));
+  });
+
+  if (sortCol) {
+    filtered.sort((a, b) => {
+      let av = a[sortCol], bv = b[sortCol];
+      if (sortCol === 'dhEmi') { av = a.dhEmiSort; bv = b.dhEmiSort; }
+      if (typeof av === 'number') return (av - bv) * sortDir;
+      return String(av).localeCompare(String(bv), 'pt-BR', { numeric: true }) * sortDir;
+    });
+  }
+
+  // stats sobre o que está filtrado
+  const nfs = new Map();
+  filtered.forEach(r => { if (!nfs.has(r.chave)) nfs.set(r.chave, r.vNF); });
+  const totalMerc = [...nfs.values()].reduce((s, v) => s + v, 0);
+  document.getElementById('statNFs').textContent = nfs.size;
+  document.getElementById('statItens').textContent = filtered.length;
+  document.getElementById('statMerc').textContent = fmt(totalMerc);
+  document.getElementById('statICMS').textContent = fmt(filtered.reduce((s, r) => s + r.vICMS, 0));
+  document.getElementById('statIPI').textContent = fmt(filtered.reduce((s, r) => s + r.vIPI, 0));
+  document.getElementById('statErrors').textContent = errors.length;
+
+  const hasData = allRows.length > 0;
+  document.getElementById('statsBar').style.display = hasData || errors.length ? 'flex' : 'none';
+  document.getElementById('toolbar').style.display = 'flex';
+  document.getElementById('tableWrap').style.display = hasData ? 'block' : 'none';
+
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  tbody.innerHTML = '';
+
+  if (!filtered.length) {
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    let lastNF = null;
+    const frag = document.createDocumentFragment();
+    filtered.forEach(r => {
+      const isFirst = r.chave !== lastNF;
+      lastNF = r.chave;
+      const tr = document.createElement('tr');
+      if (isFirst) tr.classList.add('nf-first');
+      tr.innerHTML = `
+        <td class="nf-num">${escHtml(r.nNF)}</td>
+        <td class="date-txt">${escHtml(r.dhEmi)}</td>
+        <td><div class="person-name">${escHtml(r.remNome)}</div><div class="doc-txt">${escHtml(r.remDoc)}</div></td>
+        <td><div class="person-name">${escHtml(r.destNome)}</div><div class="doc-txt">${escHtml(r.destDoc)}</div></td>
+        <td><span class="badge-transp">${escHtml(r.transp)}</span></td>
+        <td style="text-align:center"><span class="item-seq">${r.itemSeq}</span></td>
+        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--text)">${escHtml(r.xProd)}</td>
+        <td class="doc-txt">${escHtml(r.cProd)}</td>
+        <td class="ncm-txt">${escHtml(r.ncm) || '—'}</td>
+        <td class="ncm-txt">${escHtml(r.cest) || '—'}</td>
+        <td class="doc-txt">${escHtml(r.cfop)}</td>
+        <td class="doc-txt">${escHtml(r.uCom)}</td>
+        <td style="text-align:right">${fmtQtd(r.qCom)}</td>
+        <td class="val-merc" style="text-align:right">${fmt(r.vUnCom)}</td>
+        <td class="val-total" style="text-align:right">${fmt(r.vProd)}</td>
+        <td class="val-tax" style="text-align:right">${r.vICMS > 0 ? fmt(r.vICMS) : '—'}</td>
+        <td style="text-align:right;color:var(--muted)">${r.pICMS > 0 ? fmtPct(r.pICMS) : '—'}</td>
+        <td class="val-tax" style="text-align:right">${r.vIPI > 0 ? fmt(r.vIPI) : '—'}</td>
+        <td style="text-align:right;color:var(--muted)">${r.pIPI > 0 ? fmtPct(r.pIPI) : '—'}</td>
+        <td style="text-align:right;color:var(--accent);font-weight:600">${fmt(r.vNF)}</td>
+        <td class="obs-cell" title="${escHtml(r.obs)}">${escHtml(r.obs) || '—'}</td>`;
+      frag.appendChild(tr);
+    });
+    tbody.appendChild(frag);
+  }
+
+  const errLog = document.getElementById('errorLog');
+  if (errors.length) {
+    errLog.style.display = 'block';
+    document.getElementById('errorList').innerHTML = errors.map(e => `<li>⚠ ${escHtml(e.name)} — ${escHtml(e.reason)}</li>`).join('');
+  } else errLog.style.display = 'none';
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
+  document.querySelectorAll('th').forEach(t => t.classList.remove('sorted'));
+  document.getElementById(`th-${col}`)?.classList.add('sorted');
+  render();
+}
+['searchBox', 'dateFrom', 'dateTo'].forEach(id => document.getElementById(id).addEventListener('input', render));
+
+// ───────── HELPERS ─────────
+const fmt = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmtQtd = v => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 4 });
+const fmtPct = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+function fmtDate(s) { const d = s.substring(0, 10).split('-'); return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : s; }
+function escHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+// ───────── CSV (respeita filtros atuais) ─────────
+function currentRows() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+  return allRows.filter(r => {
+    if (from && r.dhEmiSort < from) return false;
+    if (to && r.dhEmiSort > to) return false;
+    if (!q) return true;
+    return [r.nNF, r.remNome, r.destNome, r.transp, r.xProd, r.cProd, r.ncm, r.cest, r.cfop, r.obs, r.chave]
+      .some(v => String(v || '').toLowerCase().includes(q));
+  });
+}
+function toCSV() {
+  const h = ['N° NF', 'Data Emissão', 'Remetente', 'CNPJ/CPF Remetente', 'Destinatário', 'CNPJ/CPF Destinatário', 'Transportadora',
+    'Item', 'Descrição Produto', 'Cód. Produto', 'NCM', 'CEST', 'CFOP', 'Unidade', 'Quantidade', 'Vl. Unitário', 'Vl. Total Item',
+    'Vl. ICMS', '% ICMS', 'Vl. IPI', '% IPI', 'Vl. Total NF', 'Dados Adicionais', 'Chave de Acesso'];
+  const c2 = n => Number(n).toFixed(2).replace('.', ',');
+  const lines = [h.join(';')];
+  currentRows().forEach(r => {
+    lines.push([r.nNF, r.dhEmi, r.remNome, r.remDoc, r.destNome, r.destDoc, r.transp,
+      r.itemSeq, r.xProd, r.cProd, r.ncm, r.cest, r.cfop, r.uCom, fmtQtd(r.qCom),
+      c2(r.vUnCom), c2(r.vProd), c2(r.vICMS), c2(r.pICMS), c2(r.vIPI), c2(r.pIPI), c2(r.vNF), r.obs, r.chave]
+      .map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';'));
+  });
+  return lines.join('\n');
+}
+function downloadCSV() {
+  if (!allRows.length) return;
+  const blob = new Blob(['\ufeff' + toCSV()], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `nfe_itens_${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url);
+  showToast('⬇ CSV exportado!');
+}
+function copyCSV() {
+  if (!allRows.length) return;
+  navigator.clipboard.writeText(toCSV()).then(() => showToast('📋 Copiado!'));
+}
+
+function showToast(msg) {
+  const e = document.querySelector('.toast'); if (e) e.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
+}
+
+// ───────── START ─────────
+(function init() {
+  if (!getPin()) { showLogin(); return; }
+  loadData(false);
+})();
+</script>
+</body>
+</html>
